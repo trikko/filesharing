@@ -1,6 +1,5 @@
 module app;
 import config;
-import uuid;
 
 import std;
 import serverino;
@@ -37,36 +36,31 @@ void wrong(Request request, Output o)
 
 /**
  * Gestisce la cancellazione di file dal bucket S3.
- * Accetta richieste DELETE nel formato /{hash}/{path} dove:
- * - hash è lo SHA256 del percorso del file concatenato con una chiave segreta
+ * Accetta richieste DELETE nel formato /file/path?h=hash dove:
  * - path è il percorso completo del file da eliminare
+ * - hash è lo SHA256 del percorso del file concatenato con una chiave segreta
  */
 @endpoint
 void remove(Request request, Output output)
 {
+	import std.digest.sha;
 	if (request.method != Request.Method.Delete)
 		return;
 
-	import std.regex;
-	import std.digest.sha;
-
-	// Verifica che il path sia nel formato corretto /{hash}/path/nomefile
-	auto pathRegex = regex(r"^/([a-f0-9]{64})(/.*?)$");
-	auto match = request.path.matchFirst(pathRegex);
-
-	if (match.empty)
+	// Verifica che ci sia un parametro h nella query
+	if (request.get.has("h") == false)
 	{
 		output.status(400);
-		output ~= "Error: Bad request.\n";
-		info("Match non valido: ", request.path);
+		output ~= "Error: Missing hation hash.\n";
+		info("Hash di conferma mancante: ", request.path);
 		return;
 	}
 
-	string providedHash = match[1];
-	string filePath = match[2];
+	string providedHash = request.get.read("h");
+	string filePath = request.path;
 
 	// Calcola l'hash atteso (SHA256 di /path/nomefile + DELETE_SECRET)
-	string expectedHash = (filePath ~ DELETE_SECRET).sha256Of.toHexString.toLower.dup;
+	string expectedHash = (filePath ~ DELETE_SECRET).sha256Of.toHexString.toLower.dup[0..32];
 
 	// Verifica che l'hash sia corretto
 	if (providedHash != expectedHash)
@@ -149,7 +143,7 @@ void upload(Request request, Output output)
 	import std.file : exists;
 	import std.process : execute;
 
-	string filePath = UUIDv7!string() ~ request.path;
+	string filePath = customUUID() ~ request.path;
 	string localFile = request.header.read("x-file-path");
 
 	if (!exists(localFile)) {
@@ -184,13 +178,13 @@ void upload(Request request, Output output)
 
 	// Calcola l'hash SHA256 per il link di cancellazione
 	import std.digest.sha;
-	string deleteHash = ("/" ~ filePath ~ DELETE_SECRET).sha256Of.toHexString.toLower.dup;
+	string deleteHash = ("/" ~ filePath ~ DELETE_SECRET).sha256Of.toHexString.toLower.dup[0..32];
 
 	output.status(200);
 	output.addHeader("Content-Type", "text/plain");
 	output ~= "\n OK: File uploaded successfully.\n";
 	output ~= i"\n * Public URL:\n https://$(CLOUD_SERVER)/".text ~ encode(filePath) ~ "\n";
-	output ~= i"\n * To delete:\n curl -X DELETE https://$(API_SERVER)/".text ~ deleteHash ~ "/" ~ encode(filePath) ~ "\n";
+	output ~= i"\n * To delete:\n curl -X DELETE https://$(API_SERVER)".text ~ encode("/" ~ filePath) ~ "?h=" ~ deleteHash ~ "\n";
 	output ~= "\n";
 }
 
@@ -208,4 +202,73 @@ void upload(Request request, Output output)
 		.setWorkerGroup(NGINX_GROUP)
 		.setMaxRequestTime(30.seconds)
 		.setMaxRequestSize(1024);
+}
+
+
+/**
+ * Genera un UUID personalizzato nel formato:
+ * timestamp_ms(padded) ~ contatore(0-999) - random(000-999) - pid
+ */
+private string customUUID() {
+	immutable shared static dt = DateTime(2000, 1, 1, 0, 0, 0);
+
+	static int counter = 0;
+	counter = (counter + 1) % 1000;
+
+	auto ts = (Clock.currTime() - cast(SysTime)dt).total!"usecs";
+	auto rnd = uniform(0, 1000);
+	auto pid = thisProcessID();
+
+	auto id = format("%017d%03d%03d%d", ts, counter, rnd, pid);
+	return decimalToBase62(id);
+}
+
+/**
+ * Converte una stringa decimale in base62 (0-9, a-z, A-Z)
+ * Usato per generare ID più compatti e URL-friendly
+ */
+string decimalToBase62(string decimalStr)
+{
+	import std.array : appender;
+	import std.algorithm : reverse;
+	import std.conv : to;
+	import std.string : strip;
+
+	// Caratteri per la codifica base62
+	immutable string BASE62_CHARS = "0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ";
+	immutable int BASE = BASE62_CHARS.length;
+
+	// Rimuovi eventuali spazi e verifica input
+	decimalStr = decimalStr.strip();
+	if (decimalStr.length == 0)
+		return "0";
+
+	// Risultato in formato base62 (al contrario)
+	auto result = appender!string();
+
+	// Continua la divisione finché il numero non diventa zero
+	while (decimalStr.length > 0 && decimalStr != "0") {
+		int remainder = 0;
+		string newDecimal = "";
+
+		// Divisione per BASE cifra per cifra
+		foreach (c; decimalStr) {
+			int digit = c - '0';
+			int current = remainder * 10 + digit;
+			newDecimal ~= to!char(current / BASE + '0');
+			remainder = current % BASE;
+		}
+
+		// Rimuovi gli zeri iniziali
+		while (newDecimal.length > 1 && newDecimal[0] == '0')
+			newDecimal = newDecimal[1..$];
+
+		// Aggiungi il carattere corrispondente al resto
+		result.put(BASE62_CHARS[remainder]);
+
+		decimalStr = newDecimal;
+	}
+
+	// Inverti il risultato
+	return result.data.dup.reverse();
 }
