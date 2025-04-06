@@ -1,0 +1,12 @@
+module config copy;
+
+enum AWS_ACCESS_KEY_ID = "";       // AWS access key id
+enum AWS_SECRET_ACCESS_KEY = "";   // AWS secret access key
+enum AWS_REGION = "";              // AWS region
+enum AWS_ENDPOINT_URL = "";        // AWS endpoint url
+enum CLOUD_SERVER = "";            // Cloud server url
+enum API_SERVER = "";              // API server url (filesharing.yourdomain.example)
+enum DELETE_SECRET = "";           // Delete secret (select a random string)
+enum NGINX_USER = "www-data";      // Usually www-data or nginx
+enum NGINX_GROUP = "www-data";     // Usually www-data or nginx
+enum API_PORT = 8323;              // Port used by serverino

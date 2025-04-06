@@ -1,0 +1,17 @@
+.dub
+docs.json
+__dummy.html
+docs/
+/uploader
+uploader.so
+uploader.dylib
+uploader.dll
+uploader.a
+uploader.lib
+source/config.d
+uploader-test-*
+*.exe
+*.pdb
+*.o
+*.obj
+*.lst

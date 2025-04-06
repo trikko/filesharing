@@ -1,0 +1,11 @@
+{
+	"authors": [
+		"Andrea Fontana"
+	],
+	"dependencies": {
+		"serverino": "~>0.7.16"
+	},
+	"license": "MIT",
+	"name": "filesharing",
+	"copyright": "Copyright © 2025, Andrea Fontana"
+}
