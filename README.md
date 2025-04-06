@@ -15,6 +15,14 @@ A simple sharing service built in D language using [serverino](https://github.co
 3. Setup your nginx:
 ```
 location / {
+
+   # Add user authentication here if needed
+   # For single user auth, simply set API_USER and API_PASSWORD in config.d
+
+   # Example of basic auth:
+   # auth_basic "Restricted Access";
+   # auth_basic_user_file /etc/nginx/.htpasswd; # htpasswd -c /etc/nginx/.htpasswd username
+
    client_max_body_size 1000M; # Max file size
 
    client_body_temp_path /tmp;
@@ -34,7 +42,8 @@ location / {
    }
 }
 ```
-4. Upload a file with `curl --data-binary @/path/to/file.mp4 https://your_server/name.mp4` or from stdout `man ls | col -b | curl --data-binary @- https://your_server/man.txt`
+4. Build & run the project `dub --build=release`. You need the latest D compiler from [dlang.org](https://dlang.org)
+5. Upload a file with `curl --data-binary @/path/to/file.mp4 https://your_server/name.mp4` or from stdout `man ls | col -b | curl --data-binary @- https://your_server/man.txt`
 
 ## Support the Project
 
