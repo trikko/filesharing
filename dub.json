@@ -5,6 +5,7 @@
 	"dependencies": {
 		"serverino": "~>0.7.16"
 	},
+	"description": "File sharing server",
 	"license": "MIT",
 	"name": "filesharing",
 	"copyright": "Copyright © 2025, Andrea Fontana"
