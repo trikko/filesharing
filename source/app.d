@@ -78,9 +78,14 @@ void remove(Request request, Output output)
 	}
 
 	// Esegui il comando s3cmd per cancellare il file
-	import std.process : executeShell;
+	import std.process : execute;
 
-	auto result = executeShell(i"s3cmd del s3://filesharing/$(filePath.strip('/')) --access_key=$(AWS_ACCESS_KEY_ID) --secret_key=$(AWS_SECRET_ACCESS_KEY) --host=$(AWS_ENDPOINT_URL) --host-bucket=$(AWS_ENDPOINT_URL)/filesharing --region=$(AWS_REGION)".text);
+	auto result = execute(["s3cmd", "del", "s3://filesharing/" ~ filePath.strip('/'),
+		"--access_key=" ~ AWS_ACCESS_KEY_ID,
+		"--secret_key=" ~ AWS_SECRET_ACCESS_KEY,
+		"--host=" ~ AWS_ENDPOINT_URL,
+		"--host-bucket=" ~ AWS_ENDPOINT_URL ~ "/filesharing",
+		"--region=" ~ AWS_REGION]);
 
 	if (result.status != 0)
 	{
@@ -105,6 +110,7 @@ void remove(Request request, Output output)
 @endpoint
 void upload(Request request, Output output)
 {
+
 	if (request.method != Request.Method.Post)
 		return;
 
@@ -140,11 +146,11 @@ void upload(Request request, Output output)
 		return;
 	}
 
+	import std.file : exists;
+	import std.process : execute;
+
 	string filePath = UUIDv7!string() ~ request.path;
 	string localFile = request.header.read("x-file-path");
-
-	import std.file : exists;
-	import std.process : executeShell;
 
 	if (!exists(localFile)) {
 		output.status(400);
@@ -153,7 +159,19 @@ void upload(Request request, Output output)
 		return;
 	}
 
-	auto result = executeShell(i"s3cmd put $(localFile) s3://filesharing/$(filePath) --access_key=$(AWS_ACCESS_KEY_ID) --secret_key=$(AWS_SECRET_ACCESS_KEY) --host=$(AWS_ENDPOINT_URL) --host-bucket=$(AWS_ENDPOINT_URL)/filesharing --region=$(AWS_REGION) --acl-public".text);
+	auto cmd = ["s3cmd", "put", localFile, "s3://filesharing/" ~ filePath,
+		"--access_key=" ~ AWS_ACCESS_KEY_ID,
+		"--secret_key=" ~ AWS_SECRET_ACCESS_KEY,
+		"--host=" ~ AWS_ENDPOINT_URL,
+		"--host-bucket=" ~ AWS_ENDPOINT_URL ~ "/filesharing",
+		"--region=" ~ AWS_REGION,
+		"--acl-public"];
+
+
+	if (STORAGE_CLASS != "")
+		cmd ~= ["--storage-class=" ~ STORAGE_CLASS];
+
+	auto result = execute(cmd);
 
 	if (result.status != 0) {
 		output.status(500);
@@ -171,8 +189,8 @@ void upload(Request request, Output output)
 	output.status(200);
 	output.addHeader("Content-Type", "text/plain");
 	output ~= "\n OK: File uploaded successfully.\n";
-	output ~= i"\n * Public URL:\n https://$(CLOUD_SERVER)/".text ~ filePath ~ "\n";
-	output ~= i"\n * To delete:\n curl -X DELETE https://$(API_SERVER)/".text ~ deleteHash ~ "/" ~ filePath ~ "\n";
+	output ~= i"\n * Public URL:\n https://$(CLOUD_SERVER)/".text ~ encode(filePath) ~ "\n";
+	output ~= i"\n * To delete:\n curl -X DELETE https://$(API_SERVER)/".text ~ deleteHash ~ "/" ~ encode(filePath) ~ "\n";
 	output ~= "\n";
 }
 
