@@ -8,8 +8,11 @@ uploader.dylib
 uploader.dll
 uploader.a
 uploader.lib
-source/config.d
 uploader-test-*
+filesharing
+filesharing-*
+dub.selections.json
+source/config.d
 *.exe
 *.pdb
 *.o
