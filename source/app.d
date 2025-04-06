@@ -108,6 +108,22 @@ void upload(Request request, Output output)
 	if (request.method != Request.Method.Post)
 		return;
 
+	if (API_USER != "" && request.user != API_USER)
+	{
+		output.status(400);
+		output ~= "Error: Bad request.\n";
+		warning("Utente non autorizzato: ", request.user);
+		return;
+	}
+
+	if (API_PASSWORD != "" && request.password != API_PASSWORD)
+	{
+		output.status(400);
+		output ~= "Error: Bad request.\n";
+		warning("Password non corretta: ", request.password);
+		return;
+	}
+
 	if (request.header.read("x-file-path").empty)
 	{
 		output.status(400);
