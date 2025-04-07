@@ -72,8 +72,6 @@ void remove(Request request, Output output)
 	}
 
 	// Esegui il comando s3cmd per cancellare il file
-	import std.process : execute;
-
 	auto result = execute(["s3cmd", "del", "s3://filesharing/" ~ filePath.strip('/'),
 		"--access_key=" ~ AWS_ACCESS_KEY_ID,
 		"--secret_key=" ~ AWS_SECRET_ACCESS_KEY,
@@ -140,8 +138,6 @@ void upload(Request request, Output output)
 		return;
 	}
 
-	import std.file : exists;
-	import std.process : execute;
 
 	string filePath = customUUID() ~ request.path;
 	string localFile = request.header.read("x-file-path");
@@ -165,16 +161,26 @@ void upload(Request request, Output output)
 	if (STORAGE_CLASS != "")
 		cmd ~= ["--storage-class=" ~ STORAGE_CLASS];
 
-	auto result = execute(cmd);
+	spawnProcess(cmd, environment.toAA(), Config.detached);
 
-	if (result.status != 0) {
+	/*
+	 * NOTE:Diamo per scontato che l'upload server --> S3 funzioni (di norma è in locale), quindi non aspettiamo il risultato
+	 * mal che vada l'utente non trova il file e riproverà.
+	 */
+
+	/*
+	// Attende il completamento dell'upload su S3
+	auto result = execute(cmd);
+	if (result.status != 0)
 		output.status(500);
 		output ~= "Error: Upload failed.\n";
 		warning("Upload failed: ", filePath);
 		warning(result.output);
 		return;
 	}
-	else info("Uploaded ", filePath, " to cloud");
+	*/
+
+	info("Uploaded ", filePath, " to cloud");
 
 	// Calcola l'hash SHA256 per il link di cancellazione
 	import std.digest.sha;
@@ -182,7 +188,7 @@ void upload(Request request, Output output)
 
 	output.status(200);
 	output.addHeader("Content-Type", "text/plain");
-	output ~= "\n OK: File uploaded successfully.\n";
+	output ~= "\n OK: File uploaded successfully. It should be available soon.\n";
 	output ~= i"\n * Public URL:\n https://$(CLOUD_SERVER)/".text ~ encode(filePath) ~ "\n";
 	output ~= i"\n * To delete:\n curl -X DELETE https://$(API_SERVER)".text ~ encode("/" ~ filePath) ~ "?h=" ~ deleteHash ~ "\n";
 	output ~= "\n";
@@ -229,10 +235,6 @@ private string customUUID() {
  */
 string decimalToBase62(string decimalStr)
 {
-	import std.array : appender;
-	import std.algorithm : reverse;
-	import std.conv : to;
-	import std.string : strip;
 
 	// Caratteri per la codifica base62
 	immutable string BASE62_CHARS = "0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ";
