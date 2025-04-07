@@ -4,6 +4,7 @@ enum AWS_ACCESS_KEY_ID = "";       // AWS access key id
 enum AWS_SECRET_ACCESS_KEY = "";   // AWS secret access key
 enum AWS_REGION = "";              // AWS region (ex: eu-west-1)
 enum AWS_ENDPOINT_URL = "";        // AWS endpoint url (ex: https://s3.nl-ams.scw.cloud for scaleway.com)
+enum AWS_BUCKET = "";		   // For Example: myfilesharing
 enum CLOUD_SERVER = "";            // Cloud server url (ex: myfilesharing.s3.nl-ams.scw.cloud)
 enum API_SERVER = "";              // API server url (es: filesharing.yourdomain.example)
 enum DELETE_SECRET = "";           // Delete secret (select a random string)

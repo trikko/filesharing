@@ -60,11 +60,11 @@ void remove(Request request, Output output)
 	}
 
 	// Esegui il comando s3cmd per cancellare il file
-	auto result = execute(["s3cmd", "del", "s3://filesharing/" ~ filePath.strip('/'),
+	auto result = execute(["s3cmd", "del", i"s3://$(AWS_BUCKET)/".text ~ filePath.strip('/'),
 		"--access_key=" ~ AWS_ACCESS_KEY_ID,
 		"--secret_key=" ~ AWS_SECRET_ACCESS_KEY,
 		"--host=" ~ AWS_ENDPOINT_URL,
-		"--host-bucket=" ~ AWS_ENDPOINT_URL ~ "/filesharing",
+		"--host-bucket=" ~ AWS_ENDPOINT_URL ~ i"/$(AWS_BUCKET)".text,
 		"--region=" ~ AWS_REGION,
 		"-q"]);
 
@@ -139,11 +139,11 @@ void upload(Request request, Output output)
 		return;
 	}
 
-	auto cmd = ["s3cmd", "put", localFile, "s3://filesharing/" ~ filePath,
+	auto cmd = ["s3cmd", "put", localFile, i"s3://$(AWS_BUCKET)/".text ~ filePath,
 		"--access_key=" ~ AWS_ACCESS_KEY_ID,
 		"--secret_key=" ~ AWS_SECRET_ACCESS_KEY,
 		"--host=" ~ AWS_ENDPOINT_URL,
-		"--host-bucket=" ~ AWS_ENDPOINT_URL ~ "/filesharing",
+		"--host-bucket=" ~ AWS_ENDPOINT_URL ~ i"/$(AWS_BUCKET)".text,
 		"--region=" ~ AWS_REGION,
 		"--acl-public", "-q"];
 
