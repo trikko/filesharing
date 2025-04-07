@@ -7,21 +7,6 @@ import serverino;
 mixin ServerinoMain;
 
 /**
- * Qualsiasi richiesta che non sia post o delete, viene scartata.
- * Priorità 1000 per essere eseguita per prima, è un check fatto prima di tutti gli altri endpoint.
- */
-@endpoint @priority(1000)
-void notvalid(Request request, Output output)
-{
-	if (request.method != Request.Method.Post && request.method != Request.Method.Delete)
-	{
-		output.status(400);
-		output ~= "Bad request.";
-		warning("Metodo non valido: ", request.method);
-	}
-}
-
-/**
  * Gestisce le richieste non valide o non corrispondenti ad altri endpoint.
  * Priorità -1 per essere eseguita per ultima, se nient'altro ha risposto.
  */
@@ -189,9 +174,29 @@ void upload(Request request, Output output)
 	output.status(200);
 	output.addHeader("Content-Type", "text/plain");
 	output ~= "\n OK: File uploaded successfully. It should be available soon.\n";
-	output ~= i"\n * Public URL:\n https://$(CLOUD_SERVER)/".text ~ encode(filePath) ~ "\n";
-	output ~= i"\n * To delete:\n curl -X DELETE https://$(API_SERVER)".text ~ encode("/" ~ filePath) ~ "?h=" ~ deleteHash ~ "\n";
+	output ~= i"\n * Public URL:\n https://$(API_SERVER)/".text ~ encode(filePath) ~ "\n";
+	output ~= i"\n * To delete:\n curl -X DELETE https://$(API_SERVER)/".text ~ encode(filePath) ~ "?h=" ~ deleteHash ~ "\n";
 	output ~= "\n";
+}
+
+@endpoint
+void download(Request request, Output output)
+{
+	if (request.method != Request.Method.Get)
+		return;
+
+	// Verifica che il path sia nel formato corretto: /[base62]/percorso
+	auto pathRegex = regex(r"^/[0-9a-zA-Z]{12,}/.*$");
+	if (!matchFirst(request.path, pathRegex))
+	{
+		output.status(400);
+		output ~= "Error: Bad request.\n";
+		warning("Formato path non valido: ", request.path);
+		return;
+	}
+
+	output.status(302);
+	output.addHeader("Location", i"https://$(CLOUD_SERVER)$(request.path)".text);
 }
 
 /**
