@@ -65,7 +65,8 @@ void remove(Request request, Output output)
 		"--secret_key=" ~ AWS_SECRET_ACCESS_KEY,
 		"--host=" ~ AWS_ENDPOINT_URL,
 		"--host-bucket=" ~ AWS_ENDPOINT_URL ~ "/filesharing",
-		"--region=" ~ AWS_REGION]);
+		"--region=" ~ AWS_REGION,
+		"-q"]);
 
 	if (result.status != 0)
 	{
@@ -144,13 +145,15 @@ void upload(Request request, Output output)
 		"--host=" ~ AWS_ENDPOINT_URL,
 		"--host-bucket=" ~ AWS_ENDPOINT_URL ~ "/filesharing",
 		"--region=" ~ AWS_REGION,
-		"--acl-public"];
+		"--acl-public", "-q"];
 
 
 	if (STORAGE_CLASS != "")
 		cmd ~= ["--storage-class=" ~ STORAGE_CLASS];
 
-	spawnProcess(cmd, environment.toAA(), Config.detached);
+	// Lancia un processo per l'upload e un altro per rimuovere il file locale quando l'upload è completo
+	auto pid = spawnProcess(cmd, environment.toAA(), Config.detached).osHandle;
+	spawnShell(i"while kill -0 $(pid) 2>/dev/null; do sleep 1; done; rm $(localFile)".text, environment.toAA(), Config.detached);
 
 	/*
 	 * NOTE:Diamo per scontato che l'upload server --> S3 funzioni (di norma è in locale), quindi non aspettiamo il risultato
@@ -159,6 +162,8 @@ void upload(Request request, Output output)
 
 	/*
 	// Attende il completamento dell'upload su S3
+	scope(exit) remove(localFile);
+
 	auto result = execute(cmd);
 	if (result.status != 0)
 		output.status(500);
