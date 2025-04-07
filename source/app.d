@@ -14,6 +14,7 @@ mixin ServerinoMain;
 void wrong(Request request, Output o)
 {
 	o.status(400);
+	o.addHeader("Content-Type", "text/plain");
 	o ~= "Bad request.";
 
 	warning("Richiesta non gestita: ", request.path);
@@ -31,6 +32,8 @@ void remove(Request request, Output output)
 	import std.digest.sha;
 	if (request.method != Request.Method.Delete)
 		return;
+
+	output.addHeader("Content-Type", "text/plain");
 
 	// Verifica che ci sia un parametro h nella query
 	if (request.get.has("h") == false)
@@ -74,7 +77,6 @@ void remove(Request request, Output output)
 	else info("Deleted ", filePath, " from cloud");
 
 	output.status(200);
-	output.addHeader("Content-Type", "text/plain");
 	output ~= "OK: File deleted successfully.\n";
 }
 
@@ -90,6 +92,8 @@ void upload(Request request, Output output)
 
 	if (request.method != Request.Method.Post)
 		return;
+
+	output.addHeader("Content-Type", "text/plain");
 
 	if (API_USER != "" && request.user != API_USER)
 	{
@@ -172,7 +176,6 @@ void upload(Request request, Output output)
 	string deleteHash = ("/" ~ filePath ~ DELETE_SECRET).sha256Of.toHexString.toLower.dup[0..32];
 
 	output.status(200);
-	output.addHeader("Content-Type", "text/plain");
 	output ~= "\n OK: File uploaded successfully. It should be available soon.\n";
 	output ~= i"\n * Public URL:\n https://$(API_SERVER)/".text ~ encode(filePath) ~ "\n";
 	output ~= i"\n * To delete:\n curl -X DELETE https://$(API_SERVER)/".text ~ encode(filePath) ~ "?h=" ~ deleteHash ~ "\n";
@@ -190,6 +193,7 @@ void download(Request request, Output output)
 	if (!matchFirst(request.path, pathRegex))
 	{
 		output.status(400);
+		output.addHeader("Content-Type", "text/plain");
 		output ~= "Error: Bad request.\n";
 		warning("Formato path non valido: ", request.path);
 		return;
